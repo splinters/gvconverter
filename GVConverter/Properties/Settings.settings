@@ -1,0 +1,39 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="GVConverter.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="IPSSH" Type="System.String" Scope="User">
+      <Value Profile="(Default)">109.226.62.12</Value>
+    </Setting>
+    <Setting Name="LoginSSH" Type="System.String" Scope="User">
+      <Value Profile="(Default)">root</Value>
+    </Setting>
+    <Setting Name="PasswordSSH" Type="System.String" Scope="User">
+      <Value Profile="(Default)">gdZQtOrYY9</Value>
+    </Setting>
+    <Setting Name="PortSSH" Type="System.UInt32" Scope="User">
+      <Value Profile="(Default)">5432</Value>
+    </Setting>
+    <Setting Name="PathToGDBFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="IPDataBasePostrgeSQL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">109.226.62.12</Value>
+    </Setting>
+    <Setting Name="LoginDataBasePostgreSQL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">giscuit</Value>
+    </Setting>
+    <Setting Name="PasswordDataBasePostgreSQL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">giscuit</Value>
+    </Setting>
+    <Setting Name="NameDataBasePostgreSQL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">giscuit</Value>
+    </Setting>
+    <Setting Name="SizeOfButtonMenu" Type="System.Drawing.Size" Scope="Application">
+      <Value Profile="(Default)">93, 90</Value>
+    </Setting>
+    <Setting Name="FontButtonMenu" Type="System.Drawing.Font" Scope="Application">
+      <Value Profile="(Default)">Microsoft Sans Serif, 9pt, style=Bold</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
