@@ -10,18 +10,20 @@ namespace GVConverter.Classes
 		/// <param name="typeGeometry"></param>
 		/// <param name="newNameTableArcGis"></param>
 		/// <returns></returns>
-		public string GetXmLforCreateTable(string typeGeometry, string newNameTableArcGis)
+		public string GetXmLforCreateTable(string typeGeometry, string newNameTableArcGis, string SRID)
 		{
 			string newTypeGeometry = getGeometryForXML(typeGeometry);
 			string featureClassDef = "";
 			string pathToTableSchemaXml = "";
 			if (typeGeometry.ToLower() == "point" || typeGeometry.ToLower() == "pointz" || typeGeometry.ToLower() == "pointzm")
 			{
-				pathToTableSchemaXml = AppDomain.CurrentDomain.BaseDirectory + "TableSchemaXML\\FeatureDatasetGeometryPoint.xml";
+				pathToTableSchemaXml = AppDomain.CurrentDomain.BaseDirectory + 
+                       ( (SRID == "2039") ? "TableSchemaXML\\FeatureDatasetGeometryPoint.xml" : "TableSchemaXML\\FeatureDatasetGeometryPoint4326.xml");
 			}
 			else
 			{
-				pathToTableSchemaXml = AppDomain.CurrentDomain.BaseDirectory + "TableSchemaXML\\FeatureDatasetGeometryNotPoint.xml";
+				pathToTableSchemaXml = AppDomain.CurrentDomain.BaseDirectory +
+                     ((SRID == "2039") ? "TableSchemaXML\\FeatureDatasetGeometryNotPoint.xml" : "TableSchemaXML\\FeatureDatasetGeometryNotPoint4326.xml");
 			}
 
 			using (StreamReader sr = new StreamReader(pathToTableSchemaXml))
@@ -39,6 +41,22 @@ namespace GVConverter.Classes
 			string replacedfeatureClassDef1 = replacedfeatureClassDef.Replace("{ChangeTypeGeometry}", newTypeGeometry);
 			replacedfeatureClassDef1 = replacedfeatureClassDef1.Replace("{ChanheHasZ}", hasZ);
 			replacedfeatureClassDef1 = replacedfeatureClassDef1.Replace("{ChanheHasM}", hasM);
+
+            /*
+            string wkt;
+            if (SRID == "2039")
+            {
+                wkt = "<WKT> PROJCS['Israel_TM_Grid', GEOGCS['GCS_Israel', DATUM['D_Israel', SPHEROID['GRS_1980', 6378137.0, 298.257222101]], PRIMEM['Greenwich', 0.0], UNIT['Degree', 0.0174532925199433]], PROJECTION['Transverse_Mercator'], PARAMETER['False_Easting', 219529.584], PARAMETER['False_Northing', 626907.39], PARAMETER['Central_Meridian', 35.20451694444445], PARAMETER['Scale_Factor', 1.0000067], PARAMETER['Latitude_Of_Origin', 31.73439361111111], UNIT['Meter', 1.0], AUTHORITY['EPSG', 2039]] </WKT>";
+                //< WKID > 2039 </ WKID >
+            }
+            else
+            {
+                wkt = "<WKT> GEOGCS['GCS_WGS_1984', DATUM['D_WGS_1984', SPHEROID['WGS_1984', 6378137.0, 298.257223563]], PRIMEM['Greenwich', 0.0], UNIT['Degree', 0.0174532925199433]] </WKT>";
+                //< WKID > 4326 </ WKID >
+            }
+            replacedfeatureClassDef1 = replacedfeatureClassDef1.Replace("{WKT}", wkt);
+            replacedfeatureClassDef1 = replacedfeatureClassDef1.Replace("{WKID}",SRID);
+            */
 			return replacedfeatureClassDef1;
 		}
 

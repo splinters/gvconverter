@@ -14,21 +14,23 @@ namespace GVConverter.Froms
     {
         private readonly string _shapeTypeGiscuit;
         private readonly string _tableName;
+        private readonly string _srid;
         private readonly DataTable _dataTable;
 
-        public CreateTableArcGISForm(string shapeTypeGiscuit, string tableName, DataTable dataTable)
+        public CreateTableArcGISForm(string shapeTypeGiscuit, string tableName, DataTable dataTable, string srid)
         {
             InitializeComponent();
             _shapeTypeGiscuit = shapeTypeGiscuit;
             _tableName = tableName;
             textBoxNameTable.Text = _tableName;
             _dataTable = dataTable;
+            _srid = srid;
         }
 
         private void btnCrateTable_Click(object sender, EventArgs e)
         {
             Cursor.Current = Cursors.WaitCursor;
-            new WorkArcGIS().CreateNewTable(_shapeTypeGiscuit, textBoxNameTable.Text);
+            new WorkArcGIS().CreateNewTable(_shapeTypeGiscuit, textBoxNameTable.Text, _srid);
             new WorkArcGIS().AddFieldToNewTable(_dataTable, textBoxNameTable.Text);
             Cursor.Current = Cursors.Default;
             DialogResult = DialogResult.OK;

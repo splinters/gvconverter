@@ -7,12 +7,17 @@ namespace GVConverter.Classes
 {
     public static class StaticVariables
     {
-        public static int TotalRowsConvertToGiscuit;
-        public static int CurrentRowConvertToGiscuit;
-        public static int NewRowsAddedToGiscuit;
+        public static System.Int32 TotalRowsConvertToGiscuit;
+        public static System.Int32 CurrentRowConvertToGiscuit;
+        public static System.Int32 NewRowsAddedToGiscuit;
 
-        public static int TotalRowsConvertToArcGIS;
-        public static int CurrentRowConvertToArcGIS;
-        
+        public static string LoginDataBasePostgreSQL = "postgres";
+        public static string PasswordDataBasePostgreSQL = "vN020213";
+
+        public static System.Int32 TotalRowsConvertToArcGIS;
+        public static System.Int32 CurrentRowConvertToArcGIS;
+        public static System.Int32 NewRowsAddedToArcGIS;
+        public static System.Int32 ErrorGeometryCount;
+
     }
 }

@@ -33,33 +33,12 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>Resources\phong_shading_128.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x86\Debug\</OutputPath>
+    <OutputPath>bin\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x86</PlatformTarget>
@@ -67,42 +46,46 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>bin\x86\Release\</OutputPath>
+    <OutputPath>bin\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esri.FileGDBAPI, Version=1.4.0.183, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=x86">
+    <Reference Include="Esri.FileGDBAPI, Version=1.5.0.248, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>dll\FileGDBx86.1.4\Esri.FileGDBAPI.dll</HintPath>
-    </Reference>
-    <Reference Include="gdal_csharp, Version=1.0.4704.32537, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\GDAL.1.9.2\lib\net40\gdal_csharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Security, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>..\packages\Npgsql.2.2.7\lib\net40\Mono.Security.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>bin\Esri.FileGDBAPI.dll</HintPath>
     </Reference>
     <Reference Include="Npgsql, Version=2.2.7.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
       <HintPath>..\packages\Npgsql.2.2.7\lib\net40\Npgsql.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="ogr_csharp, Version=1.0.4704.32537, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\GDAL.1.9.2\lib\net40\ogr_csharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Renci.SshNet">
-      <HintPath>..\packages\SSH.NET.2013.4.7\lib\net40\Renci.SshNet.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -127,6 +110,12 @@
     <Compile Include="FormMain.Designer.cs">
       <DependentUpon>FormMain.cs</DependentUpon>
     </Compile>
+    <Compile Include="Froms\Connect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Froms\Connect.Designer.cs">
+      <DependentUpon>Connect.cs</DependentUpon>
+    </Compile>
     <Compile Include="Froms\CreateTableArcGISForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -145,6 +134,12 @@
     <Compile Include="Froms\CreateTableGiscuitForm.Designer.cs">
       <DependentUpon>CreateTableGiscuitForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Froms\MessagesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Froms\MessagesForm.Designer.cs">
+      <DependentUpon>MessagesForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Froms\SettingsProgramm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -157,13 +152,13 @@
     <Compile Include="Froms\SplashScreen.Designer.cs">
       <DependentUpon>SplashScreen.cs</DependentUpon>
     </Compile>
-    <Compile Include="GdalConfiguration.cs" />
-    <Compile Include="GdalNativeConfiguration.cs" />
-    <Compile Include="GdalPluginConfiguration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="FormMain.resx">
       <DependentUpon>FormMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Froms\Connect.resx">
+      <DependentUpon>Connect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Froms\CreateTableArcGISForm.resx">
       <DependentUpon>CreateTableArcGISForm.cs</DependentUpon>
@@ -173,6 +168,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Froms\CreateTableGiscuitForm.resx">
       <DependentUpon>CreateTableGiscuitForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Froms\MessagesForm.resx">
+      <DependentUpon>MessagesForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Froms\SettingsProgramm.resx">
       <DependentUpon>SettingsProgramm.cs</DependentUpon>
@@ -188,7 +186,7 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
+      <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <Compile Include="Properties\Resources.Designer.cs">
@@ -225,16 +223,13 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dll\BruTile.Desktop.dll" />
-    <Content Include="dll\FileGDBx86.1.4\Esri.FileGDBAPI.dll" />
-    <Content Include="dll\FileGDBx86.1.4\FileGDBAPI.dll" />
-    <Content Include="dll\FileGDBx86.1.4\FileGDBAPID.dll" />
-    <Content Include="dll\gdal_wrap.dll" />
-    <Content Include="dll\ogr_FileGDB.dll" />
-    <Content Include="dll\proj.dll" />
+    <None Include="Resources\tools-3.png" />
+    <None Include="Resources\tools-3-48.png" />
+    <Content Include="TableSchemaXML\FeatureDatasetGeometryNotPoint4326.xml" />
     <Content Include="TableSchemaXML\FeatureDatasetGeometryNotPointZ.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TableSchemaXML\FeatureDatasetGeometryPoint4326.xml" />
     <Content Include="TableSchemaXML\FeatureDatasetGeometryPointZ.xml">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -257,12 +252,8 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if not exist "$(TargetDir)gdal" md "$(TargetDir)gdal"
-    xcopy /s /y "$(SolutionDir)packages\GDAL.Native.1.9.2\gdal\*.*" "$(TargetDir)gdal"
-    if not exist "$(TargetDir)gdal" md "$(TargetDir)gdal"
-    xcopy /s /y "$(SolutionDir)packages\GDAL.Plugins.1.9.2\gdal\*.*" "$(TargetDir)gdal"
-    if not exist "$(TargetDir)gdal" md "$(TargetDir)gdal"
-    xcopy /s /y "$(SolutionDir)packages\GDAL.Native.1.9.2\gdal\*.*" "$(TargetDir)gdal"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -270,5 +261,5 @@
   </Target>
   <Target Name="AfterBuild">
   </Target>
-  -->  
+  -->
 </Project>

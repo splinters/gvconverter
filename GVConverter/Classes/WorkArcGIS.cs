@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Globalization;
 using System.Linq;
@@ -8,6 +9,20 @@ using System.Windows.Forms;
 using System.Xml;
 using Esri.FileGDB;
 using FieldType = Esri.FileGDB.FieldType;
+
+/*
+using System.ComponentModel;
+using System.Data;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using Esri.FileGDB;
+using GVConverter.Properties;
+using Npgsql;
+         */
+
+
 
 namespace GVConverter.Classes
 {
@@ -83,27 +98,30 @@ namespace GVConverter.Classes
 				var xmlDocument = new XmlDocument();
 				xmlDocument.LoadXml(domainDefinition);
 
-				var fieldType = xmlDocument.SelectSingleNode("//FieldType").InnerText;
+				var fieldType   = xmlDocument.SelectSingleNode("//FieldType").InnerText;
 				var mergePolicy = xmlDocument.SelectSingleNode("//MergePolicy").InnerText;
 				var splitPolicy = xmlDocument.SelectSingleNode("//SplitPolicy").InnerText;
 				var description = xmlDocument.SelectSingleNode("//Description").InnerText;
 
 				dataTable.Columns.Clear();
-				dataTable.Columns.Add("Name", typeof (string));
-				dataTable.Columns.Add("Code", typeof (string));
+                dataTable.Columns.Add("Code", typeof(string));
+                dataTable.Columns.Add("Name", typeof (string));
+                dataTable.Columns.Add("FieldType", typeof(string));
 
-				foreach (XmlNode codedValueNode in xmlDocument.SelectNodes("//CodedValues/CodedValue"))
+                foreach (XmlNode codedValueNode in xmlDocument.SelectNodes("//CodedValues/CodedValue"))
 				{
 					for (int i = 0; i < codedValueNode.ChildNodes.Count; i++)
 					{
 						if (codedValueNode.ChildNodes[i].Name == "Name")
 						{
 							var newRow = dataTable.NewRow();
-							var nameNode = codedValueNode["Name"];
-							if (nameNode != null) newRow[0] = nameNode.InnerText;
 							var codeNode = codedValueNode["Code"];
-							if (codeNode != null) newRow[1] = codeNode.InnerText;
-							dataTable.Rows.Add(newRow);
+							if (codeNode != null) newRow[0] = codeNode.InnerText;
+                            var nameNode = codedValueNode["Name"];
+                            if (nameNode != null) newRow[1] = nameNode.InnerText;
+                            newRow[2] = fieldType;
+//                            newRow[3] = description;
+                            dataTable.Rows.Add(newRow);
 						}
 					}
 				}
@@ -130,33 +148,53 @@ namespace GVConverter.Classes
 			var dataTable = new DataTable();
 			var sqlString = $"select * from {tableName}";
 			var firstIteration = true;
+            /*
+                        Table esriTable = geodatabase.OpenTable(tableName);
 
-			var esriTable = geodatabase.OpenTable(tableName);
+                        foreach (var fieldDef in esriTable.FieldDefs)
+                        {
+                            dataTable.Columns.Add(fieldDef.Name, typeof (string));
+                        }
 
-			foreach (var fieldDef in esriTable.FieldDefs)
+                        esriTable.Close();
+            */
+            var rows = geodatabase.ExecuteSQL(sqlString);
+
+            foreach (Row row in rows)
 			{
-				dataTable.Columns.Add(fieldDef.Name, typeof (string));
+				if (firstIteration)
+				{
+					for (int i = 0; i < row.FieldInformation.Count; i++)
+					{
+						if (!dataTable.Columns.Contains(row.FieldInformation.GetFieldName(i)))
+						{
+							dataTable.Columns.Add(row.FieldInformation.GetFieldName(i), typeof (string));
+						}
+					}
+					break;
+				}
 			}
 
-			esriTable.Close();
+            Int32 limit10000count = 0;
+            bool limit10000 = false;
+            var count = rows.Count();
+            if (count > 10000) {
+                if (MessageBox.Show("Count records too big: " + count.ToString() + " Load only first 1000?", "Load Records",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+                == DialogResult.Yes)
+                {
+//                    limit10000count = 0;
+                    limit10000 = true;
+                }
+             }
 
-//			foreach (Row row in geodatabase.ExecuteSQL(sqlString))
-//			{
-//				if (firstIteration)
-//				{
-//					for (int i = 0; i < row.FieldInformation.Count; i++)
-//					{
-//						if (!dataTable.Columns.Contains(row.FieldInformation.GetFieldName(i)))
-//						{
-//							dataTable.Columns.Add(row.FieldInformation.GetFieldName(i), typeof (string));
-//						}
-//					}
-//					break;
-//				}
-//			}
-
-			foreach (Row row in geodatabase.ExecuteSQL(sqlString))
+			foreach (Row row in rows)
 			{
+                limit10000count++;
+                if (limit10000 && limit10000count > 1000)
+                {
+                    break;
+                }
 				DataRow newDataRow = dataTable.NewRow();
 				for (int i = 0; i < row.FieldInformation.Count; i++)
 				{
@@ -189,8 +227,8 @@ namespace GVConverter.Classes
 									newDataRow[fieldName] = row.GetOID().ToString();
 									break;
 								case FieldType.Geometry:
-									newDataRow[fieldName] = row.GetGeometry().shapeType;
-									break;
+									newDataRow[fieldName] = row.GetGeometry().shapeType;   //536870963 - circle?   -1610612685 - multipolygonz?
+                                    break;
 								case FieldType.Blob:
 									//newDataRow[fieldName] = executeSql.GetBinary();
 									break;
@@ -206,23 +244,36 @@ namespace GVConverter.Classes
 				}
 				dataTable.Rows.Add(newDataRow);
 			}
-			var table = geodatabase.OpenTable(tableName);
+			var table = geodatabase.OpenTable("\\"+tableName);
 			var xMin = table.Extent.xMin.ToString(CultureInfo.InvariantCulture);
 			var xMax = table.Extent.xMax.ToString(CultureInfo.InvariantCulture);
 			var yMin = table.Extent.yMin.ToString(CultureInfo.InvariantCulture);
 			var yMax = table.Extent.yMax.ToString(CultureInfo.InvariantCulture);
 			var zMin = table.Extent.zMin.ToString(CultureInfo.InvariantCulture);
 			var zMax = table.Extent.zMax.ToString(CultureInfo.InvariantCulture);
-			table.Dispose();
-			return Tuple.Create(dataTable, xMin, xMax, yMin, yMax, zMin, zMax);
-		}
+
+            var ds = table.Definition;
+            var xmlDocument = new XmlDocument();
+            xmlDocument.LoadXml(ds);
+
+            var spatial = xmlDocument.SelectSingleNode("//GeometryDef");
+            //get spatial reference and SRID
+            //                var spatial = xmlDocument.SelectSingleNode("//SpatialReference");
+            var geometrytype = spatial.SelectSingleNode("//GeometryType").InnerText.ToString();
+            var sSRID = spatial.SelectSingleNode("//WKID").InnerText;
+
+            table.Dispose();
+            return Tuple.Create(dataTable, xMin, xMax, yMin, yMax, zMin, count.ToString());
+ //           return Tuple.Create(dataTable, xMin, xMax, yMin, yMax, zMin, zMax); // , count.ToString());
+                                                                                //            return Tuple.Create(dataTable, xMin, xMax, yMin, yMax, zMin, zMax, geometrytype, SRID);
+        }
 
 
-		/// <summary>
-		/// </summary>
-		/// <param name="currentTable"></param>
-		/// <returns></returns>
-		public string GetTypeShapeArcGIS(string currentTable)
+        /// <summary>
+        /// </summary>
+        /// <param name="currentTable"></param>
+        /// <returns></returns>
+        public string GetTypeShapeArcGIS(string currentTable)
 		{
 			var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
 			string str = string.Empty;
@@ -266,8 +317,14 @@ namespace GVConverter.Classes
 			{
 				if (row.FieldInformation.GetFieldName(i).ToLower() == "shape_length")
 				{
-					returnValue = Convert.ToDecimal(row.GetDouble(row.FieldInformation.GetFieldName(i)),
-						CultureInfo.InvariantCulture);
+                    try
+                    {
+                        returnValue = Convert.ToDecimal(row.GetDouble(row.FieldInformation.GetFieldName(i)),
+                            CultureInfo.InvariantCulture);
+                    } catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message.ToString());
+                    }
 				}
 			}
 			return returnValue;
@@ -543,8 +600,24 @@ namespace GVConverter.Classes
 			var table = geodatabase.OpenTable(currentTable);
 			foreach (Row row in table.Search("*", "", envelope, RowInstance.Recycle))
 			{
-				table.Delete(row);
-			}
+                try
+                {
+                    table.Delete(row);
+                }
+                catch (FileGDBException ex)
+                {
+                    if (ex.ErrorCode == -2147220947)
+                    {
+                        MessageBox.Show("Cannot acquire lock table " + currentTable + "  ", @"Error delete row from table", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                finally
+                {
+                    //                   break;
+                    //continue;
+                }
+            }
+			
 			table.Close();
 			geodatabase.Close();
 		}
@@ -555,16 +628,33 @@ namespace GVConverter.Classes
 		public void DeleteCurrentTable(string currentTable)
 		{
 			var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
-			geodatabase.Delete(currentTable, "Feature Class");
-			geodatabase.Close();
+            try
+            {
+                geodatabase.Delete(currentTable, "Feature Class");
+            }
+            catch (FileGDBException ex)
+            {
+                if (ex.ErrorCode == -2147220970)
+                {
+                    MessageBox.Show("Cannot acquire lock table " + currentTable + "  ", @"Error delete table", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"General exception. {ex.Message}", @"Error ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //                    MessageBox.Show("Table " + nameTable + " error! row - " + @i + ": " + @currentcellstring, "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //throw;
+            }
+
+            geodatabase.Close();
 			MessageBox.Show("Table has been deleted!");
 		}
 
-		public void CreateNewTable(string typeGeometryGiscuit, string newNameTable)
+		public void CreateNewTable(string typeGeometryGiscuit, string newNameTable, string SRID)
 		{
 			var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
 			var replacedfeatureClassDef = new GenerateXMLForCreateTableArcGIS().GetXmLforCreateTable(typeGeometryGiscuit,
-				newNameTable);
+				newNameTable, SRID);
 
 			try
 			{
@@ -581,11 +671,12 @@ namespace GVConverter.Classes
 				else if (e.ErrorCode == -2147220654)
 				{
 					MessageBox.Show("The table name is invalid", @"Error create new table", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				}
+				} else
 				{
-					throw;
-				}
-			}
+                    //throw;
+                    MessageBox.Show(e.Message, @"Error create new table", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
 			finally
 			{
 				geodatabase.Close();
@@ -598,68 +689,157 @@ namespace GVConverter.Classes
 		/// <param name="nameTable"></param>
 		public void AddFieldToNewTable(DataTable dataTable, string nameTable)
 		{
-			var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
-			Table table = geodatabase.OpenTable("\\" + nameTable);
-			for (int i = 0; i < dataTable.Rows.Count; i++)
-			{
-				if (dataTable.Rows[i][0].ToString().ToLower() != "the_geom")
-				{
-					if (dataTable.Rows[i][0].ToString().ToLower() != "shape_leng")
-					{
-						if (dataTable.Rows[i][0].ToString().ToLower() != "gviconvertmark")
-						{
-							if (dataTable.Rows[i][0].ToString().ToLower() != "gid")
-							{
-								string defenitionField =
-									new GenerateXMLForCreateTableArcGIS().GetXmlforCreateField(dataTable.Rows[i][0].ToString(),
-										dataTable.Rows[i][1].ToString());
-								try
-								{
-									table.AddField(defenitionField);
-								}
-								catch (FileGDBException e)
-								{
-									if (e.ErrorCode == -2147219884)
-										continue;
-								}
-							}
-						}
-					}
-				}
-			}
+            Table table = null;
+            try
+            {
+                var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
+                table = geodatabase.OpenTable("\\" + nameTable);
+
+            } catch (FileGDBException ex){
+                MessageBox.Show($"Error. {ex.Message}", @"Get all tables error", MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+
+            }
+
+            for (int i = 0; i < dataTable.Rows.Count; i++)
+            {
+                string columnName = "";
+                columnName = dataTable.Rows[i][0].ToString().ToLower();
+                if ((columnName != "the_geom") & (columnName != "shape_leng") & (columnName != "gviconvertmark") & (columnName != "gid") & (columnName != "objectid"))
+                {
+                    string defenitionField =
+                        new GenerateXMLForCreateTableArcGIS().GetXmlforCreateField(dataTable.Rows[i][0].ToString(),
+                            dataTable.Rows[i][1].ToString());
+                    try
+                    {
+                        table.AddField(defenitionField);
+                    }
+                    catch (FileGDBException e)
+                    {
+                        if (e.ErrorCode == -2147219884)  //?
+                            continue;
+                    }
+                }
+            }
 		}
 
+        
 		/// <summary>
 		/// </summary>
 		/// <param name="nameTable"></param>
-		public void AddNewItemsToTable(string nameTable)
-		{
-			var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
+//		public void AddNewItemsToTable(string nameTable) //, ref BackgroundWorker backgroundWorkerPostgisArcgis)
+
+        public static void AddNewItemsToTable(string nameTable, bool toESPG2039, ref BackgroundWorker backgroundWorkerPostgisArcgis)
+        {
+            var geodatabase = Geodatabase.Open(Properties.Settings.Default.PathToGDBFolder);
 			var pgGeometryType = WorkGiscuit.GetTableGeometryType(nameTable);
-			var pgTable = WorkGiscuit.GetAllRowsFromTable(nameTable);
+            CallBackMy.callbackEventHandler("GetAllRowsFromTable -->" + nameTable);
+            var pgTable = WorkGiscuit.GetAllRowsFromTable(nameTable, toESPG2039);  //check OID reading
+            CallBackMy.callbackEventHandler("Open geodatabase for add data....." );
 
-			for (int i = 0; i < pgTable.Rows.Count; i++)
-			{
-				int partsNumber = (int) pgTable.Rows[i]["NumGeometries"]; // geometry parts number
-				int pointsNumber = (int) pgTable.Rows[i]["NumPoints"]; // total point amount in geometry
+            int partsNumber = 0; int pointsNumber = 0;
+            var esriTable = geodatabase.OpenTable("\\" + nameTable);
+            string currentcellstring;
+            string pgColumnName = "";
+            //FormMain.con
+//            var formmain = new FormMain();
 
-				var esriTable = geodatabase.OpenTable("\\" + nameTable);
+            CallBackMy.callbackEventHandler("Start add new item to table arcgis from postgres ." + nameTable +" EPSG2039 "+toESPG2039.ToString());
+
+
+            /*
+                        formmain.labelBackgroudConvertPostgis2Arcgis.Visible = true;
+                        formmain.labelBackgroudConvertPostgis2Arcgis.Text = "";
+
+                        formmain.ProgressPostgis2Arcgis.Visible = true;
+
+                        formmain.ProgressPostgis2Arcgis.Minimum = 0;
+                        formmain.ProgressPostgis2Arcgis.Maximum = pgTable.Rows.Count;
+            */
+            //            StaticVariables.TotalRowsConvertToGiscuit = pgTable.Rows.Count;
+            //            StaticVariables.NewRowsAddedToGiscuit = 0;
+
+            //  formmain.ProgressPostgis2Arcgis.Value = 0;
+            //            CallBackMy.callbackEventHandlerProgress( 0, pgTable.Rows.Count);
+
+//            StaticVariables.PostgresToArcGis.Minimum = 0;
+            StaticVariables.TotalRowsConvertToArcGIS = pgTable.Rows.Count;
+            StaticVariables.CurrentRowConvertToArcGIS = 0;
+            //            StaticVariables.NewRowsAddedToArcGIS = 
+
+            for (Int32 i = 0; i < pgTable.Rows.Count; i++)
+            {
+                currentcellstring = string.Empty;
+                // backgroundworker Progressbar
+                StaticVariables.CurrentRowConvertToArcGIS++;
+                //CallBackMy.callbackEventHandler("Row --> " + StaticVariables.CurrentRowConvertToArcGIS.ToString());
+                backgroundWorkerPostgisArcgis.ReportProgress(StaticVariables.CurrentRowConvertToArcGIS);
+                if (backgroundWorkerPostgisArcgis.CancellationPending)
+                {
+                    break;
+                }
+
+                //тут должна быть проверка корректности геометрии
+                try
+                {
+
+                    if (pgTable.Rows[i]["NumGeometries"] == DBNull.Value) 
+                    {
+
+
+                        for (int j = 0; j < pgTable.Columns.Count; j++)
+                        {
+                            var pgCell = pgTable.Rows[i][j];
+                            currentcellstring = currentcellstring + pgTable.Columns[j].ColumnName + "->" + pgCell.ToString() + " |";
+                        }
+                        StaticVariables.ErrorGeometryCount++;
+                        MessageBox.Show("Table " + nameTable + $" error geometry! row # " + @i + $" content:{currentcellstring}", "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        CallBackMy.callbackEventHandler("Error geometry!!!!!");
+                        CallBackMy.callbackEventHandler(currentcellstring);  //отключить вывод каждой строки
+                        
+                        continue;
+                    }
+                    else
+                    {
+                        partsNumber = (int)pgTable.Rows[i]["NumGeometries"]; // geometry parts number
+                    }
+
+                    if (pgTable.Rows[i]["NumPoints"] == DBNull.Value)
+                    {
+                        for (int j = 0; j < pgTable.Columns.Count; j++)
+                        {
+                            var pgCell = pgTable.Rows[i][j];
+                            currentcellstring = currentcellstring + pgTable.Columns[j].ColumnName + "->" + pgCell.ToString() + " |";
+                        }
+                        StaticVariables.ErrorGeometryCount++;
+                        //MessageBox.Show("Table " + nameTable + $" error geometry! row - " + @i , "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        CallBackMy.callbackEventHandler("Error geometry!!!!!");
+                        CallBackMy.callbackEventHandler(currentcellstring);
+                        continue;
+                    }
+                    else
+                    {
+                        pointsNumber = (int)pgTable.Rows[i]["NumPoints"];
+                    }
+
+                         // total point amount in geometry
+
 				var newEsriRow = esriTable.CreateRowObject();
 				for (int j = 0; j < pgTable.Columns.Count; j++)
 				{
-					var pgColumnName = pgTable.Columns[j].ColumnName;
+					pgColumnName = pgTable.Columns[j].ColumnName;
 					if (pgColumnName == "shape_leng")
 						pgColumnName = "shape_length";
 					var pgColumnType = pgTable.Columns[j].DataType.ToString();
 					var pgCell = pgTable.Rows[i][j];
-					if (pgTable.Columns[j].ColumnName != "geomtrey")
+					if (pgColumnName != "geomtrey")
 					{
-						if ((pgTable.Columns[j].ColumnName != "numgeometries"))
-						{
-							if ((pgTable.Columns[j].ColumnName != "numpoints"))
-							{
-								newEsriRow = SetValueToCell(newEsriRow, pgColumnName, pgColumnType, pgCell);
-							}
+						if ((pgColumnName != "numgeometries") & (pgColumnName != "numpoints") & (pgColumnName != "gviconvertmark") & (pgColumnName != "objectid"))
+                            {
+                               currentcellstring = currentcellstring + pgColumnName + "->" + pgCell.ToString() + " |";
+//                               formmain.labelBackgroudConvertPostgis2Arcgis.Text = currentcellstring;
+                               newEsriRow = SetValueToCell(newEsriRow, pgColumnName, pgColumnType, pgCell);
 						}
 					}
 					else
@@ -708,88 +888,134 @@ namespace GVConverter.Classes
 								break;
 						}
 					}
-				}
-				esriTable.Insert(newEsriRow);
-				esriTable.Close();
-			}
+                    }
 
-		}
 
-		/// <summary>
-		/// </summary>
-		/// <param name="row"></param>
-		/// <param name="columnName"></param>
-		/// <param name="columnType"></param>
-		/// <param name="cellValue"></param>
-		/// <returns></returns>
-		private static Row SetValueToCell(Row row, string columnName, string columnType, object cellValue)
+
+                    esriTable.Insert(newEsriRow);
+                    //CallBackMy.callbackEventHandlerProgress(i, pgTable.Rows.Count);
+
+                    /*
+                                        // backgroundworker Progressbar
+                                        StaticVariables.CurrentRowConvertToGiscuit = i;
+                                        backgroundWorkerPostgisArcgis.ReportProgress(StaticVariables.CurrentRowConvertToGiscuit, 0);//, currentcellstring);
+                                        if (backgroundWorkerPostgisArcgis.CancellationPending)
+                                        {
+                                            break;
+                                        }
+                    */
+                }
+                catch (FileGDBException ex)
+                {
+                    if (ex.ErrorCode == -2147219885)
+                    {
+//                        MessageBox.Show($"{ex.Message} - {ex.ErrorCode}", @"Error exporting ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Table " + nameTable + $" error - field {pgColumnName} not found! . {ex.Message} row - " + @i + ": " + @currentcellstring, "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                    }
+                    else
+                    {
+                        //                    MessageBox.Show("Table " + nameTable + " error! row - " + @i + ": " + @currentcellstring, "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show($"{ex.Message} - {ex.ErrorCode}", @"Error exporting ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+//                    MessageBox.Show($"General exception. {ex.Message}", @"Error exporting domain to XML", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Table " + nameTable + $" error! . {ex.Message} row - " + @i + ": " + @currentcellstring, "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //                    MessageBox.Show("Table " + nameTable + " error! row - " + @i + ": " + @currentcellstring, "Export to gdb table", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //throw;
+                }
+
+               //CallBackMy.callbackEventHandler(currentcellstring);  //вывод в сообщения 
+
+            }
+            esriTable.Close(); //закрыть файловую бгд
+            CallBackMy.callbackEventHandler("Close ArcGIS gdb after convert.");
+            //            geodatabase.Close();
+        }
+
+
+
+        /// <summary>
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="columnName"></param>
+        /// <param name="columnType"></param>
+        /// <param name="cellValue"></param>
+        /// <returns></returns>
+        private static Row SetValueToCell(Row row, string columnName, string columnType, object cellValue)
 		{
-			if (cellValue == DBNull.Value)
-			{
-				row.SetNull(columnName);
-			}
+            if (cellValue == DBNull.Value)
+            {
+                row.SetNull(columnName);
+            }
+            else
+            {
+                switch (columnType)
+                {
+                    case "System.Boolean":
+                        //                 row.SetInteger(columnName, Convert.ToInt16(cellValue));
+                        row.SetString(columnName, cellValue.ToString());
+                        break;
 
-			switch (columnType)
-			{
-				case "System.Boolean":
-					break;
+                    case "System.Byte":
+                        break;
 
-				case "System.Byte":
-					break;
+                    case "System.Char":
+                        row.SetString(columnName, cellValue.ToString());
+                        break;
 
-				case "System.Char":
-					row.SetString(columnName, cellValue.ToString());
-					break;
+                    case "System.DateTime":
+                        row.SetDate(columnName, Convert.ToDateTime(cellValue));
+                        break;
 
-				case "System.DateTime":
-					row.SetDate(columnName, Convert.ToDateTime(cellValue));
-					break;
+                    case "System.Decimal":
+                        row.SetDouble(columnName, Convert.ToDouble(cellValue));
+                        break;
 
-				case "System.Decimal":
-					row.SetDouble(columnName, Convert.ToDouble(cellValue));
-					break;
+                    case "System.Double":
+                        row.SetDouble(columnName, Convert.ToDouble(cellValue));
+                        break;
 
-				case "System.Double":
-					row.SetDouble(columnName, Convert.ToDouble(cellValue));
-					break;
+                    case "System.Int16":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
 
-				case "System.Int16":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
+                    case "System.Int32":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
 
-				case "System.Int32":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
+                    case "System.Int64":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
 
-				case "System.Int64":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
+                    case "System.SByte":
+                        break;
 
-				case "System.SByte":
-					break;
+                    case "System.Single":
+                        break;
 
-				case "System.Single":
-					break;
+                    case "System.String":
+                        row.SetString(columnName, (string)cellValue);
+                        break;
 
-				case "System.String":
-					row.SetString(columnName, (string) cellValue);
-					break;
+                    case "System.TimeSpan":
+                        break;
 
-				case "System.TimeSpan":
-					break;
+                    case "System.UInt16":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
 
-				case "System.UInt16":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
+                    case "System.UInt32":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
 
-				case "System.UInt32":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
-
-				case "System.UInt64":
-					row.SetInteger(columnName, (int) cellValue);
-					break;
-			}
+                    case "System.UInt64":
+                        row.SetInteger(columnName, (int)cellValue);
+                        break;
+                }
+            }
 			return row;
 		}
 

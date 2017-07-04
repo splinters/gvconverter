@@ -6,6 +6,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Text;
+using System.Xml;
+
 using Esri.FileGDB;
 using GVConverter.Properties;
 using Npgsql;
@@ -26,10 +29,8 @@ namespace GVConverter.Classes
 				try
 				{
 					const string sql = @"SELECT t.table_name, gc.type 
-										FROM information_schema.tables t 
-										LEFT JOIN geometry_columns gc on t.table_schema = gc.f_table_schema 
-											AND t.table_name = gc.f_table_name 
-										WHERE t.table_schema = 'giscuit_layers'";
+										FROM information_schema.tables t LEFT JOIN geometry_columns gc on t.table_schema = gc.f_table_schema 
+											AND t.table_name = gc.f_table_name WHERE t.table_schema = 'giscuit_layers'  order by t.table_name";
 					var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
 					var dataSet = new DataSet();
 					npgsqlDataAdapter.Fill(dataSet);
@@ -48,50 +49,96 @@ namespace GVConverter.Classes
 			return listTables;
 		}
 
-		/// <summary>
-		/// </summary>
-		/// <returns></returns>
-//		public static List<object> GetAllTablesWithoutGeometry()
-//		{
-//			using (var sshDbManager = new SshDbManager())
-//			{
-//				try
-//				{
-//					const string sql =
-//						"SELECT table_name FROM information_schema.tables WHERE table_schema = 'giscuit_layers' and table_name not in (select f_table_name from geometry_columns)";
-//					var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
-//					var dataSet = new DataSet();
-//					npgsqlDataAdapter.Fill(dataSet);
-//
-//					TempListTableGiscuit.DataTable = dataSet.Tables[0];
-//					var listTables = dataSet.Tables[0].Rows.Cast<DataRow>().Select(r => r[0]).ToList();
-//
-//					Cursor.Current = Cursors.Default;
-//					return listTables;
-//				}
-//				catch (Exception exception)
-//				{
-//					MessageBox.Show($"Reading all tables failed. {exception.Message}", @"Get all tables error", MessageBoxButtons.OK,
-//						MessageBoxIcon.Error);
-//				}
-//			}
-//
-//			Cursor.Current = Cursors.Default;
-//			return null;
-//		}
+        /// <summary>
+        /// </summary>
+        /// <returns></returns>
+        public static List<object> GetAllTablesWithGeometry()
+        {
+            List<object> listTables = null;
 
-		public static List<object> GetAllDomainNames()
+            using (var sshDbManager = new SshDbManager())
+            {
+                try
+                {
+                    const string sql = @"SELECT t.table_name, gc.type 
+										FROM information_schema.tables t LEFT JOIN geometry_columns gc on t.table_schema = gc.f_table_schema 
+											AND t.table_name = gc.f_table_name WHERE t.table_schema = 'giscuit_layers' and table_name in (select f_table_name from geometry_columns) order by t.table_name";
+                    var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
+                    var dataSet = new DataSet();
+                    npgsqlDataAdapter.Fill(dataSet);
+
+                    TempListTableGiscuit.DataTable = dataSet.Tables[0];
+                    listTables = dataSet.Tables[0].Rows.Cast<DataRow>().Select(r => r[0]).ToList();
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show($"Reading tables failed. {exception.Message}", @"Get all tables error", MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+
+            Cursor.Current = Cursors.Default;
+            return listTables;
+        }
+
+
+        /// <summary>
+        /// </summary>
+        /// <returns></returns>
+        		public static List<object> GetAllTablesWithoutGeometry()
+        		{
+        			using (var sshDbManager = new SshDbManager())
+        			{
+        				try
+        				{
+        					const string sql =
+        						"SELECT table_name FROM information_schema.tables WHERE table_schema = 'giscuit_layers' and table_name not in (select f_table_name from geometry_columns)";
+        					var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
+        					var dataSet = new DataSet();
+        					npgsqlDataAdapter.Fill(dataSet);
+        
+        					TempListTableGiscuit.DataTable = dataSet.Tables[0];
+        					var listTables = dataSet.Tables[0].Rows.Cast<DataRow>().Select(r => r[0]).ToList();
+        
+        					Cursor.Current = Cursors.Default;
+        					return listTables;
+        				}
+        				catch (Exception exception)
+        				{
+        					MessageBox.Show($"Reading tables failed. {exception.Message}", @"Get all tables error", MessageBoxButtons.OK,
+        						MessageBoxIcon.Error);
+        				}
+        			}
+        
+        			Cursor.Current = Cursors.Default;
+        			return null;
+        		}
+
+        public static List<object> GetAllDomainNames()
 		{
 			using (var sshDbManager = new SshDbManager())
 			{
 				try
 				{
-					const string sql = @"select table_name 
-									from information_schema.columns 
-									where table_schema = 'giscuit_layers' 
-									group by table_name 
-									having string_agg(column_name, ',') = 'gid,code,description,gviconvertmark'";
-					var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
+					const string sql = @"select 
+                            table_name
+                            from information_schema.columns where table_schema = 'giscuit_layers' 
+                            and table_name not in (select f_table_name from geometry_columns)
+                            and column_name in
+                            (	select unnest(array['id','code','name','gviconvertmark']) as colname
+                            )
+                            group by table_name 
+                            order by table_name  ";
+                    /*                                 select 'gid' as column_name
+                                                    union select 'code'  
+                                                    union select 'name' 
+                                                    union select  'description'  
+                                                    union select 'gviconvertmark'
+                                                
+                             (	select unnest(array['gid','code','name','gviconvertmark']) as colname
+
+                      */
+                    var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
 					var dataSet = new DataSet();
 					npgsqlDataAdapter.Fill(dataSet);
 
@@ -116,7 +163,7 @@ namespace GVConverter.Classes
 		/// <param name="selectedTableArcGis"></param>
 		/// <param name="selectedTableGiscuit"></param>
 		/// <param name="backgroundWorker1"></param>
-		public static void TransferRowsFromArcGisToGiscuit(string selectedTableArcGis, string selectedTableGiscuit, ref BackgroundWorker backgroundWorker1)
+		public static void TransferRowsFromArcGisToGiscuit(string selectedTableArcGis, string selectedTableGiscuit, Boolean toWGS84, ref BackgroundWorker backgroundWorkerConvertToGiscuit)
 		{
 			AddMarkColumnToDbTable(selectedTableGiscuit);
 
@@ -143,58 +190,151 @@ namespace GVConverter.Classes
 				}
 
 				var sqlString = "select * from " + selectedTableArcGis;
-				var i = 0;
+				System.Int32 i = 0;
 				var typeOfGeometry = string.Empty;
 //				var arcGisRowCount = geodatabase.OpenTable(selectedTableArcGis);
 				StaticVariables.TotalRowsConvertToGiscuit = geodatabase.ExecuteSQL(sqlString).Count();
 				StaticVariables.NewRowsAddedToGiscuit = 0;
-				DataTable dataTable = null;
-				var countRows = 0;
+//				DataTable dataTable = null;
+                NpgsqlCommand command;
+                var workArcGis = new WorkArcGIS();
 
-				foreach (var row in geodatabase.ExecuteSQL(sqlString))
+                Table table = geodatabase.OpenTable("\\"+selectedTableArcGis);
+               
+                var ds = table.Definition;
+                var xmlDocument = new XmlDocument();
+                xmlDocument.LoadXml(ds);
+
+                var spatial = xmlDocument.SelectSingleNode("//GeometryDef");
+                //get spatial reference and SRID
+                //                var spatial = xmlDocument.SelectSingleNode("//SpatialReference");
+                var geometrytype = spatial.SelectSingleNode("//GeometryType").InnerText;
+                var SRID = spatial.SelectSingleNode("//WKID").InnerText;
+
+
+                CallBackMy.callbackEventHandler("Geometry: " + geometrytype +" EPSG:"+SRID);
+
+                //var countRows = 0;
+                var gdrow = geodatabase.ExecuteSQL(sqlString);
+                var countrow = gdrow.Count();
+                string insertGeom, shapeLength, geomtype;
+                string otherFields, valuesFields;
+
+                /*
+                if (countrow > 0)
+                {
+                    typeOfGeometry = new WorkArcGIS().GetTypeShapeArcGIS(selectedTableArcGis);
+                    otherFields = new WorkArcGIS().GetFieldsName(selectedTableArcGis);
+                    Row row;
+
+
+                    for (i=0; i<countrow; i++)
+                    {
+                        row = gdrow.ElementAt(i);
+                        // backgroundworker Progressbar
+                        StaticVariables.CurrentRowConvertToGiscuit = i;
+                        backgroundWorkerConvertToGiscuit.ReportProgress(StaticVariables.CurrentRowConvertToGiscuit);
+                        if (backgroundWorkerConvertToGiscuit.CancellationPending)
+                        {
+                            break;
+                        }
+                        shapeLength = workArcGis.GetLengthShapeValueFromRow(r).ToString(CultureInfo.InvariantCulture);
+
+                        //try
+                        //{
+                            //ShapeBuffer shape = row.GetGeometry().shapeBuffer;
+                            //string shapetype = row.GetGeometry().shapeType.ToString();
+                            geomtype = row.GetGeometry().geometryType.ToString();
+                            insertGeom = ConvertGeometryArcGIS.ConvertToWkt(r.GetGeometry(), typeOfGeometry, shapeLength, SRID);
+                            //CallBackMy.callbackEventHandler("Geometry: " + BitConverter.ToString(row.GetGeometry().shapeBuffer) );
+                            CallBackMy.callbackEventHandler("Geometry: " + insertGeom);
+                            if (toWGS84 && !(SRID == "4326"))
+                            {
+                                insertGeom = $" ST_Transform({insertGeom}, 4326)";
+                            }
+                        //}
+                        //catch (Exception)
+                        //{
+                        //    continue;
+                        //}
+                        
+                        valuesFields = WorkArcGIS.ConvertRowValuesToSqlString(r);
+
+                        if (row.GetGeometry().geometryType.ToString().ToLower() != "point")
+                        {
+                            command = new NpgsqlCommand(
+                                $"INSERT INTO giscuit_layers.{selectedTableGiscuit}" +
+                                $"(shape_leng, the_geom, {otherFields} gviconvertmark) " +
+                                $"VALUES({shapeLength}, {insertGeom}, @{valuesFields}true)",
+                                sshDbManager.Connection);
+                        }
+                        else
+                        {
+                            command = new NpgsqlCommand(
+                                $"INSERT INTO giscuit_layers.{selectedTableGiscuit}" +
+                                $"(the_geom, {otherFields} gviconvertmark) " +
+                                $"VALUES({insertGeom}, @{valuesFields}true)",
+                                sshDbManager.Connection);
+                        }
+
+                        CallBackMy.callbackEventHandler("TransferRowsFromArcGisToGiscuit Command: " + command.CommandText);
+                        try
+                        {
+                            command.ExecuteNonQuery();
+                            StaticVariables.NewRowsAddedToGiscuit++;
+                        }
+                        catch (NpgsqlException e)
+                        {
+                            MessageBox.Show($"Error message: {e.BaseMessage}, Error code: {e.Code}");
+                            break;
+                        }
+                    }
+                }
+                */
+                
+                foreach (Row row in gdrow)
 				{
 					i++;
 					if (i == 1)
 					{
 						typeOfGeometry = new WorkArcGIS().GetTypeShapeArcGIS(selectedTableArcGis);
-						var sql = "SELECT objectid FROM giscuit_layers." + selectedTableGiscuit;
-						var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
-						var dataSet = new DataSet();
-						npgsqlDataAdapter.Fill(dataSet);
-						dataTable = dataSet.Tables[0];
-					}
-					if (dataTable != null)
-					{
-						countRows =
-							dataTable.AsEnumerable()
-								.Count(a => Convert.ToInt32(a["objectid"] == DBNull.Value ? 0 : a["objectid"]) == row.GetOID());
-
-					}
-
+                       
+                    }
+                   
 					// backgroundworker Progressbar
 					StaticVariables.CurrentRowConvertToGiscuit++;
-					backgroundWorker1.ReportProgress(StaticVariables.CurrentRowConvertToGiscuit);
-					if (backgroundWorker1.CancellationPending)
+                    backgroundWorkerConvertToGiscuit.ReportProgress(StaticVariables.CurrentRowConvertToGiscuit);
+					if (backgroundWorkerConvertToGiscuit.CancellationPending)
 					{
 						break;
 					}
-					var workArcGis = new WorkArcGIS();
-					if (countRows == 0)
-					{
-						var shapeLength = workArcGis.GetLengthShapeValueFromRow(row).ToString(CultureInfo.InvariantCulture);
-						string insertGeom;
-						try
-						{
-							insertGeom = ConvertGeometryArcGIS.ConvertToWkt(row.GetGeometry(), typeOfGeometry, shapeLength);
+
+//                    if (countRows == 0)
+                    if ( true )
+                        {
+                         shapeLength = workArcGis.GetLengthShapeValueFromRow(row).ToString(CultureInfo.InvariantCulture);
+						 //string insertGeom;
+                        //ST_Transform(the_geom,4326)
+
+                        try
+                        {
+                            //ShapeBuffer shape = row.GetGeometry().shapeBuffer;
+                            //string shapetype = row.GetGeometry().shapeType.ToString();
+                            geomtype = row.GetGeometry().geometryType.ToString();
+                            insertGeom = ConvertGeometryArcGIS.ConvertToWkt(row.GetGeometry(), typeOfGeometry, shapeLength, SRID);
+                            //CallBackMy.callbackEventHandler("Geometry: " + BitConverter.ToString(row.GetGeometry().shapeBuffer) );
+                            CallBackMy.callbackEventHandler("Geometry: " + insertGeom);
+                            if ( toWGS84 && !(SRID == "4326")) 
+                            {
+                                insertGeom = $" ST_Transform({insertGeom}, 4326)";
+                            }
 						}
 						catch (Exception)
 						{
 							continue;
 						}
-						var otherFields = new WorkArcGIS().GetFieldsName(selectedTableArcGis);
-						var valuesFields = WorkArcGIS.ConvertRowValuesToSqlString(row);
-
-						NpgsqlCommand command;
+						otherFields = new WorkArcGIS().GetFieldsName(selectedTableArcGis);
+						valuesFields = WorkArcGIS.ConvertRowValuesToSqlString(row);
 
 						if (row.GetGeometry().geometryType.ToString().ToLower() != "point")
 						{
@@ -213,6 +353,8 @@ namespace GVConverter.Classes
 								sshDbManager.Connection);
 						}
 
+                        CallBackMy.callbackEventHandler("TransferRowsFromArcGisToGiscuit Command: " + command.CommandText);
+                                                
 						try
 						{
 							command.ExecuteNonQuery();
@@ -225,11 +367,16 @@ namespace GVConverter.Classes
 						}
 					}
 				}
+                
 
-				geodatabase.Close();
+                if (geodatabase != null)
+                {
+                    geodatabase.Close();
+                }
 				Cursor.Current = Cursors.Default;
 			}
 		}
+
 
 		private static void AddMarkColumnToDbTable(string selectedTableGiscuit)
 		{
@@ -301,8 +448,11 @@ namespace GVConverter.Classes
 					{
 						string message = "Table '" + nameTabeGiscuit + "' already exists";
 						MessageBox.Show(message, @"Error create new table", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					}
-					throw;
+					} else
+                    {
+                        MessageBox.Show(e.Message.ToString(), @"Error create table - ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+					//throw;
 				}
 			}
 		}
@@ -398,6 +548,30 @@ namespace GVConverter.Classes
 			return dataTable;
 		}
 
+        public static Int64 GetRecordCount(string pgTableName)
+        {
+            Int64 reccount = 0;
+
+            using (var sshDbManager = new SshDbManager())
+            {
+                var command = new NpgsqlCommand("SELECT count(*) from giscuit_layers." + pgTableName, sshDbManager.Connection);
+                try
+                {
+                   reccount = Convert.ToInt64(command.ExecuteScalar());
+                }
+                catch (Exception ex)
+                {
+                    CallBackMy.callbackEventHandler("GetRecordCount");
+                    CallBackMy.callbackEventHandler(ex.Message.ToString());
+                    //throw;
+                }
+
+            }
+
+
+
+            return reccount;
+        }
 		public static DataTable ReadTableWithGeometry(string pgTableName, string rowsLimit)
 		{
 			Cursor.Current = Cursors.WaitCursor;
@@ -409,7 +583,7 @@ namespace GVConverter.Classes
 				{
 					var command =
 						new NpgsqlCommand(
-							$"SELECT ST_AsText(the_geom) as geometry, * FROM giscuit_layers.{pgTableName} limit {rowsLimit}",
+							$"SELECT ST_AsText(the_geom) as geometry, ST_SRID (the_geom) as SRID, * FROM giscuit_layers.{pgTableName} limit {rowsLimit}",
 							sshDbManager.Connection);
 					var npgsqlDataAdapter = new NpgsqlDataAdapter(command);
 
@@ -459,7 +633,7 @@ namespace GVConverter.Classes
 		/// </summary>
 		/// <param name="nameTable"></param>
 		/// <returns>DataTable</returns>
-		public static DataTable GetAllRowsFromTable(string nameTable)
+		public static DataTable GetAllRowsFromTable(string nameTable, bool toESPG2039)
 		{
 			Cursor.Current = Cursors.WaitCursor;
 			var dataTable = new DataTable();
@@ -468,18 +642,28 @@ namespace GVConverter.Classes
 			{
 				var command =
 					new NpgsqlCommand(
-						"SELECT ST_AsText(the_geom) as geomtrey, ST_NumGeometries(the_geom) as NumGeometries, ST_NPoints(the_geom) as NumPoints, * FROM giscuit_layers." +
+                        ( toESPG2039 ? "SELECT ST_AsText(ST_Transform(the_geom,2039))" : "SELECT ST_AsText(ST_Transform(the_geom,4326))")
+                        +" as geomtrey, ST_NumGeometries(the_geom) as NumGeometries, ST_NPoints(the_geom) as NumPoints, * FROM giscuit_layers." +
 						nameTable, sshDbManager.Connection);
 				var npgsqlDataAdapter = new NpgsqlDataAdapter(command);
 
-				try
-				{
+                CallBackMy.callbackEventHandler("GetAllRowsFromTable..");
+                CallBackMy.callbackEventHandler(command.CommandText);
+
+                try
+                {
 					npgsqlDataAdapter.Fill(dataTable);
 				}
-				catch (Exception)
+                catch (NpgsqlException e)
+                {
+                    CallBackMy.callbackEventHandler("WorkGiscuit->GetAllRowsFromTable ." + nameTable + " -> npqsql " + e.Code +" -> "+ e.Message.ToString());
+                }
+                catch (Exception ex)
 				{
-//					throw;
-				}
+                    //					throw;
+                    //MessageBox.Show(ex.Message.ToString());
+                    CallBackMy.callbackEventHandler("WorkGiscuit->GetAllRowsFromTable ." + nameTable + " -> "+ex.Message.ToString());
+                }
 				finally
 				{
 					if (dataTable.Columns["the_geom"] != null)
@@ -500,16 +684,39 @@ namespace GVConverter.Classes
 		/// <summary>
 		/// </summary>
 		/// <param name="newNameTableGiscuit"></param>
-		public static void CreateNewDomainTable(string newNameTableGiscuit)
+		public static void CreateNewDomainTable(string newNameTableGiscuit, string codeType)
 		{
 			var owner = Settings.Default.NameDataBasePostgreSQL;
 
-			using (var sshDbManager = new SshDbManager())
+            
+            string typeCode = "integer";
+            //
+            switch (codeType)
+            {
+                case "esriFieldTypeInteger":
+                    typeCode = "integer";
+                    break;
+                case "esriFieldTypeSmallInteger":
+                    typeCode = "smallint";
+                    break;
+                case "esriFieldTypeString":
+                    typeCode = "character varying";
+                    break;
+            }
+            CallBackMy.callbackEventHandler("Type filed domain table in postgres: "+codeType +" - > "+ typeCode);
+
+            using (var sshDbManager = new SshDbManager())
 			{
 				var command = new NpgsqlCommand("CREATE TABLE giscuit_layers." + newNameTableGiscuit +
 				                                "(gid serial NOT NULL," +
-				                                "Code integer," +
-				                                "Description character varying," +
+                                                //спорный кусок кода. нужно контролировать тип доменного индекса - целый, короткий или строковый
+//                                                "Code +  "integer" + "," +
+//                                                "Code integer," +
+                                                "Code "+ typeCode + "," +
+                                                //должно быть поле Name, но от старіх наработок используется Description
+//                                                "Name character varying," +
+                                                //
+                                                "Description character varying," +
 				                                "gviconvertmark boolean," +
 				                                "CONSTRAINT " + newNameTableGiscuit + "_pkey PRIMARY KEY (gid)) " +
 				                                "WITH (OIDS=FALSE);" +
@@ -527,40 +734,69 @@ namespace GVConverter.Classes
 						var message = "Table '" + newNameTableGiscuit + "' already exists";
 						MessageBox.Show(message, @"Error create new table", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					}
-				}
+                    else
+                    {
+                        MessageBox.Show(e.Message.ToString(), @"Error - ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    }
+                    CallBackMy.callbackEventHandler(e.Message.ToString());
+                }
 			}
 		}
 
 		public static void InsertNewRowToDomain(string nameTableArcGis, string nameTableGiscuit)
 		{
-			DataTable dataTable = new WorkArcGIS().GetDomainDataForInsert(nameTableArcGis);
+
+
+            var tmpGetData = new WorkArcGIS().GetDataForCurrentDomain(nameTableArcGis);
+            var codeType = tmpGetData.Item2;
+
+            string typeCode = "integer";
+            
+            //
+            switch (codeType)
+            {
+                case "esriFieldTypeInteger":
+                    typeCode = "integer";
+                    break;
+                case "esriFieldTypeSmallInteger":
+                    typeCode = "smallint";
+                    break;
+                case "esriFieldTypeString":
+                    typeCode = "text";
+                    break;
+            }
+
+            DataTable dataTable = new WorkArcGIS().GetDomainDataForInsert(nameTableArcGis);
 
 			using (var sshDbManager = new SshDbManager())
 			{
-				try
-				{
 					for (int i = 0; i < dataTable.Rows.Count; i++)
 					{
-						var valueDescription = dataTable.Rows[i][1].ToString();
-						valueDescription = valueDescription.Replace("'", "\\'");
-						var command =
+                        try
+                        {
+                            var valueDescription = dataTable.Rows[i][1].ToString();
+						    valueDescription = valueDescription.Replace("'", "\\'");
+						    var command =
 							new NpgsqlCommand(
 								"INSERT INTO giscuit_layers." + nameTableGiscuit + "(code, description, gviconvertmark) VALUES(" +
-								dataTable.Rows[i][0] + ", E'" +
-								valueDescription + "', " +
+//                                "INSERT INTO giscuit_layers." + nameTableGiscuit + "(code, name, gviconvertmark) VALUES(" +
+                                //                                dataTable.Rows[i][0] + ", E'" +
+                                "'" + dataTable.Rows[i][0] + "'::" + typeCode +", " 
+                                + "'"+valueDescription+"'" + ", " +
 								"true)", sshDbManager.Connection);
-						command.ExecuteNonQuery();
-					}
-				}
-				catch (Exception)
-				{
-//					throw;
-				}
-				finally
-				{
-					Cursor.Current = Cursors.Default;
-				}
-			}
+                            CallBackMy.callbackEventHandler(command.ToString());
+                            command.ExecuteNonQuery();
+                        }
+                        catch (Exception e)
+                        {
+                            CallBackMy.callbackEventHandler(e.Message.ToString());
+                            MessageBox.Show(e.Message.ToString(), @"Error write domain data to postgres", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            //throw;
+                        }
+                    }
+            }
+			Cursor.Current = Cursors.Default;
 		}
 
 		public static string GetTableGeometryType(string tableName)
@@ -600,5 +836,23 @@ namespace GVConverter.Classes
 				return dataTable?.Rows[0];
 			}
 		}
+
+        public static string GetTableDomainType(string tableName )
+        {
+            string domaintype = "";
+
+            using (var sshDbManager = new SshDbManager())
+            {
+                var sql = $"select data_type from information_schema.columns where table_schema = 'giscuit_layers' and table_name = '{tableName}' and column_name = 'code'";
+                var npgsqlDataAdapter = new NpgsqlDataAdapter(sql, sshDbManager.Connection);
+                var dataSet = new DataSet();
+                npgsqlDataAdapter.Fill(dataSet);
+                var dataTable = dataSet.Tables[0];
+
+                domaintype = dataTable?.Rows[0][0].ToString();
+
+                return domaintype;
+            }
+        } 
 	}
 }

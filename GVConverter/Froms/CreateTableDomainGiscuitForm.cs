@@ -14,9 +14,9 @@ namespace GVConverter.Froms
 
         private void btnCrateTable_Click(object sender, EventArgs e)
         {
-            Cursor.Current = Cursors.WaitCursor;
-            WorkGiscuit.CreateNewDomainTable(textBoxNameTable.Text);
-            Cursor.Current = Cursors.Default;
+            //Cursor.Current = Cursors.WaitCursor;
+            //WorkGiscuit.CreateNewDomainTable(textBoxNameTable.Text, );
+            //Cursor.Current = Cursors.Default;
             DialogResult = DialogResult.OK;
         }
 

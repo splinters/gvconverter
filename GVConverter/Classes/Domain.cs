@@ -10,14 +10,35 @@ namespace GVConverter.Classes
 {
 	public static class Domain
 	{
-		private static string GenerateDomainXmlDefinition(string domainName, DataTable dataTable)
+		private static string GenerateDomainXmlDefinition(string domainName, DataTable dataTable, string domaintype)
 		{
 			var domainDef = new StringBuilder();
 
 			domainDef.AppendLine("<esri:Domain xsi:type='esri:CodedValueDomain' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:esri='http://www.esri.com/schemas/ArcGIS/10.1'>");
 			domainDef.AppendLine($"<DomainName>{domainName}</DomainName>");
-			domainDef.AppendLine("<FieldType>esriFieldTypeString</FieldType>");
-			domainDef.AppendLine("<MergePolicy>esriMPTDefaultValue</MergePolicy>");
+            switch (domaintype)
+            {
+                case "integer":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeInteger</FieldType>");
+                    break;
+                case "smallint":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeShort</FieldType>");
+                    break;
+                case "double precision":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeInteger</FieldType>");
+                    break;
+                case "text":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeString</FieldType>");
+                    break;
+                case "character varying":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeString</FieldType>");
+                    break;
+                case "":
+                    domainDef.AppendLine("<FieldType>esriFieldTypeString</FieldType>");
+                    break;
+            }
+
+            domainDef.AppendLine("<MergePolicy>esriMPTDefaultValue</MergePolicy>");
 			domainDef.AppendLine("<SplitPolicy>esriSPTDefaultValue</SplitPolicy>");
 			domainDef.AppendLine("<Description></Description>");
 			domainDef.AppendLine("<Owner></Owner>");
@@ -29,19 +50,44 @@ namespace GVConverter.Classes
 				var codedValueCode = dataTable.Rows[i][1];
 				var codedValueName = dataTable.Rows[i][2];
 
-				domainDef.AppendLine("<CodedValue xsi:type='esri:CodedValue'>");
+				domainDef.AppendLine($"<CodedValue xsi:type = 'esri:CodedValue'>");
 				domainDef.AppendLine($"<Name>{codedValueName}</Name>");
-				domainDef.AppendLine($"<Code xsi:type='xs:string'>{codedValueCode}</Code>");
-				domainDef.AppendLine("</CodedValue>");
+
+                switch (domaintype)
+                {
+                    case "integer":
+                        domainDef.AppendLine($"<Code xsi:type='xs:int'>{codedValueCode}</Code>");
+                        break;
+                    case "smallint":
+                        domainDef.AppendLine($"<Code xsi:type='xs:short'>{codedValueCode}</Code>");
+                        break;
+                    case "double precision":
+                        domainDef.AppendLine($"<Code xsi:type='xs:int'>{codedValueCode}</Code>");
+                        break;
+                    case "text":
+                        domainDef.AppendLine($"<Code xsi:type='xs:string'>{codedValueCode}</Code>");
+                        break;
+                    case "character varying":
+                        domainDef.AppendLine($"<Code xsi:type='xs:string'>{codedValueCode}</Code>");
+                        break;
+                    case "":
+                        domainDef.AppendLine($"<Code xsi:type='xs:string'>{codedValueCode}</Code>");
+                        break;
+                }
+
+                domainDef.AppendLine("</CodedValue>");
 			}
 
 			domainDef.AppendLine("</CodedValues>");
 			domainDef.Append("</esri:Domain>");
-			
-			return domainDef.ToString();
+
+            CallBackMy.callbackEventHandler("--------Domain Definition----------------");
+            CallBackMy.callbackEventHandler(domainDef.ToString());
+            CallBackMy.callbackEventHandler("-----------------------------------------");
+            return domainDef.ToString();
 		}
 
-		public static void CreateArcGisDomain(string domainName)
+		public static void CreateArcGisDomain(string domainName, string domaintype)
 		{
 			try
 			{
@@ -51,8 +97,29 @@ namespace GVConverter.Classes
 
 				var dataTable = WorkGiscuit.ReadTable(domainName, "null");
 
-				var domainDef = GenerateDomainXmlDefinition(domainName, dataTable);
+                var domainDef = GenerateDomainXmlDefinition(domainName, dataTable, domaintype);
 
+/*
+                string domainDef = '<Domain xsi:type="esri: CodedValueDomain" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:esri="http://www.esri.com/schemas/ArcGIS/10.1">
+                                +'< DomainName > vintst17dom </ DomainName >'
+  +'< FieldType > esriFieldTypeString </ FieldType >'
+  +'< MergePolicy > esriMPTDefaultValue </ MergePolicy >'
+  +'< SplitPolicy > esriSPTDefaultValue </ SplitPolicy >'
+  + '< Description > vintst 17 dom descr</ Description >'
+     + '   < Owner >'
+        + '</ Owner >'
+        + '< CodedValues xsi: type = "esri:ArrayOfCodedValue" >'
+        + '      < CodedValue xsi: type = "esri:CodedValue" >'
+        + '     < Name > tttt11 </ Name >'
+             + '< Code xsi: type = "xs:string" > t1 </ Code >'
+             + '</ CodedValue >'
+             + '< CodedValue xsi: type = "esri:CodedValue" >'
+             + '    < Name > ttttt2 </ Name >'
+             + '    < Code xsi: type = "xs:string" > t2 </ Code >'
+             + '    </ CodedValue >'
+             + '  </ CodedValues >'
+             + '</ Domain > ';    
+*/
 				if (isDomainExist)
 				{
 					geodatabase.AlterDomain(domainDef);

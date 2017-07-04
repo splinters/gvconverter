@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Configuration;
 using GVConverter.Classes;
 
 namespace GVConverter.Froms
@@ -30,6 +31,7 @@ namespace GVConverter.Froms
         {
             Properties.Settings.Default.Save();
             Close();
+            CallBackMy.callbackEventHandler("save config");
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
@@ -39,7 +41,20 @@ namespace GVConverter.Froms
 
         private void btnResetSettingsDefault_Click(object sender, EventArgs e)
         {
+            
             Properties.Settings.Default.Reset();
+        }
+
+        private void textBoxRowsLimit_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!(Char.IsDigit(e.KeyChar)))
+            {
+                if (e.KeyChar != (char)Keys.Back)
+                {
+                    e.Handled = true;
+                }
+
+            }
         }
     }
 }

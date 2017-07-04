@@ -9,7 +9,7 @@ namespace GVConverter.Classes
 {
     public static class ConvertGeometryArcGIS
     {
-        public static string ConvertToWkt(ShapeBuffer geometry, string typeOfGeometry, string shapeLength)
+        public static string ConvertToWkt(ShapeBuffer geometry, string typeOfGeometry, string shapeLength, string SRID)
         {
             try
             {
@@ -21,17 +21,17 @@ namespace GVConverter.Classes
                     //case ShapeType.Point:
                     case "Point":
                         PointShapeBuffer point = geometry;
-                        retval = processPointBuffer(point);
+                        retval = processPointBuffer(point, SRID);
                         break;
                     //case ShapeType.PointZ:
                     case "PointZ":
                         PointShapeBuffer pointZ = geometry;
-                        retval = processPointBuffer(pointZ);
+                        retval = processPointBuffer(pointZ, SRID);
                         break;
                     //case ShapeType.PointZM:
                     case "PointZM":
                         PointShapeBuffer pointZM = geometry;
-                        retval = processPointBufferZM(pointZM);
+                        retval = processPointBufferZM(pointZM, SRID);
                         break;
                     /////////////////Multipoint/////////////////
                     //case ShapeType.Multipoint:
@@ -41,7 +41,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPointShapeBuffer multiPoint = geometry;
-                            retval = processMultiPointBuffer(multiPoint);
+                            retval = processMultiPointBuffer(multiPoint, SRID);
                         }
                         break;
                     //case ShapeType.MultipointZ:
@@ -51,7 +51,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPointShapeBuffer multiPointZ = geometry;
-                            retval = processMultiPointBuffer(multiPointZ);
+                            retval = processMultiPointBuffer(multiPointZ, SRID);
                         }
                         break;
                     //case ShapeType.MultipointZM:
@@ -61,7 +61,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPointShapeBuffer multiPointZM = geometry;
-                            retval = processMultiPointBufferZM(multiPointZM);
+                            retval = processMultiPointBufferZM(multiPointZM, SRID);
                         }
                         break;
                     /////////////////Polyline/////////////////
@@ -72,7 +72,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolyline = geometry;
-                            retval = processMultiPartBuffer(multiPartPolyline, "MULTILINESTRING");
+                            retval = processMultiPartBuffer(multiPartPolyline, "MULTILINESTRING", SRID);
                         }
                         break;
                     //case ShapeType.PolylineZ:
@@ -82,7 +82,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolylineZ = geometry;
-                            retval = processMultiPartBuffer(multiPartPolylineZ, "MULTILINESTRING");
+                            retval = processMultiPartBuffer(multiPartPolylineZ, "MULTILINESTRING", SRID);
                         }
                         break;
                     //case ShapeType.PolylineZM:
@@ -92,7 +92,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolylineZM = geometry;
-                            retval = processMultiPartBufferZM(multiPartPolylineZM, "MULTILINESTRING");
+                            retval = processMultiPartBufferZM(multiPartPolylineZM, "MULTILINESTRING", SRID);
                         }
                         break;
                     /////////////////Polygon/////////////////
@@ -103,7 +103,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolygon = geometry;
-                            retval = processMultiPartBuffer(multiPartPolygon, "MULTIPOLYGON");
+                            retval = processMultiPartBuffer(multiPartPolygon, "MULTIPOLYGON", SRID);
                         }
                         break;
                     //case ShapeType.PolygonZ:
@@ -113,7 +113,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolygonZ = geometry;
-                            retval = processMultiPartBuffer(multiPartPolygonZ, "MULTIPOLYGON");
+                            retval = processMultiPartBuffer(multiPartPolygonZ, "MULTIPOLYGON", SRID);
                         }
                         break;
                     //case ShapeType.PolygonZM:
@@ -123,7 +123,7 @@ namespace GVConverter.Classes
                         else
                         {
                             MultiPartShapeBuffer multiPartPolygonZM = geometry;
-                            retval = processMultiPartBufferZM(multiPartPolygonZM, "MULTIPOLYGON");
+                            retval = processMultiPartBufferZM(multiPartPolygonZM, "MULTIPOLYGON", SRID);
                         }
                         break;
                 }
@@ -139,11 +139,12 @@ namespace GVConverter.Classes
         /// </summary>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        private static string processPointBuffer(PointShapeBuffer buffer)
+        private static string processPointBuffer(PointShapeBuffer buffer, string SRID)
         {
             try
             {
-                string retval = "ST_GeomFromText('POINT ({0})', 2039)";
+//                string retval = "ST_GeomFromText('POINT ({0})', 2039)";
+                string retval = "ST_GeomFromText('POINT ({0})', "+SRID+")";
                 bool hasZ = false;
                 string coord = hasZ ? getCoordinate(buffer.point.x, buffer.point.y, buffer.Z) : getCoordinate(buffer.point.x, buffer.point.y);
                 retval = string.Format(retval, coord);
@@ -159,11 +160,11 @@ namespace GVConverter.Classes
         /// </summary>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        private static string processPointBufferZM(PointShapeBuffer buffer)
+        private static string processPointBufferZM(PointShapeBuffer buffer, string SRID)
         {
             try
             {
-                string retval = "ST_GeomFromText('POINT ({0})', 2039)";
+                string retval = "ST_GeomFromText('POINT ({0})', " + SRID + ")"; ;
                 string coord = getCoordinate(buffer.point.x, buffer.point.y);
                 retval = string.Format(retval, coord);
                 return retval;
@@ -178,11 +179,11 @@ namespace GVConverter.Classes
         /// </summary>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        private static string processMultiPointBuffer(MultiPointShapeBuffer buffer)
+        private static string processMultiPointBuffer(MultiPointShapeBuffer buffer, string SRID)
         {
             try
             {
-                string retval = "ST_GeomFromText('MULTIPOINT ({0})', 2039)";
+                string retval = "ST_GeomFromText('MULTIPOINT ({0})', "+SRID+")";;
                 bool hasZ = false;
                 Point[] points = buffer.Points;
                 List<string> coords = new List<string>();
@@ -206,11 +207,11 @@ namespace GVConverter.Classes
         /// </summary>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        private static string processMultiPointBufferZM(MultiPointShapeBuffer buffer)
+        private static string processMultiPointBufferZM(MultiPointShapeBuffer buffer, string SRID)
         {
             try
             {
-                string retval = "ST_GeomFromText('MULTIPOINT ({0})', 2039)";
+                string retval = "ST_GeomFromText('MULTIPOINT ({0})', " + SRID + ")"; ;
                 Point[] points = buffer.Points;
                 List<string> coords = new List<string>();
                 for (int i = 0; i < points.Length; i++)
@@ -234,13 +235,13 @@ namespace GVConverter.Classes
         /// <param name="buffer"></param>
         /// <param name="wktType"></param>
         /// <returns></returns>
-        private static string processMultiPartBuffer(MultiPartShapeBuffer buffer, string wktType)
+        private static string processMultiPartBuffer(MultiPartShapeBuffer buffer, string wktType, string SRID)
         {
             try
             {
                 List<string> delims = getMultipartDelimiter(wktType);
                 bool hasZ = false;
-                string retval = "ST_GeomFromText('" + wktType + "({0})', 2039)";
+                string retval = "ST_GeomFromText('" + wktType + "({0})', " + SRID + ")"; ;
                 int numPts = buffer.NumPoints;
                 int numParts = buffer.NumParts;
                 int[] parts = buffer.Parts;
@@ -287,12 +288,12 @@ namespace GVConverter.Classes
         /// <param name="buffer"></param>
         /// <param name="wktType"></param>
         /// <returns></returns>
-        private static string processMultiPartBufferZM(MultiPartShapeBuffer buffer, string wktType)
+        private static string processMultiPartBufferZM(MultiPartShapeBuffer buffer, string wktType, string SRID)
         {
             try
             {
                 List<string> delims = getMultipartDelimiter(wktType);
-                string retval = "ST_GeomFromText('" + wktType + "({0})', 2039)";
+                string retval = "ST_GeomFromText('" + wktType + "({0})', " + SRID + ")"; ;
                 int numPts = buffer.NumPoints;
                 int numParts = buffer.NumParts;
                 int[] parts = buffer.Parts;
